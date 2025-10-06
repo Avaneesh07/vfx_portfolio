@@ -21,7 +21,7 @@ GROUND_FRICTION = 5.0
 GRAVITY_ON = True
 GRAVITY = 1400.0
 
-N_BALLS = 8                 # <— try 8 to start
+N_BALLS = 8                 # try 8 to start
 
 # ---------------------------
 # Helpers
@@ -49,13 +49,47 @@ def make_balls(n):
         colors.append(tuple(int(c) for c in rng.uniform(140, 255, size=3)))
     return pos, vel, colors
 
+def resolve_ball_ball_collisions(pos, vel, radius=RADIUS, e=REST_COEFF):
+    """
+    Pairwise elastic collisions between equal-mass circles.
+    - Separates interpenetrations with positional correction.
+    - Applies impulse along the collision normal when approaching.
+    """
+    n = pos.shape[0]
+    min_dist = 2.0 * radius
+    min_dist2 = min_dist * min_dist
+    for i in range(n):
+        for j in range(i + 1, n):
+            delta = pos[j] - pos[i]
+            d2 = float(delta[0] * delta[0] + delta[1] * delta[1])
+            if d2 < min_dist2:
+                # avoid div by zero
+                d = math.sqrt(d2) if d2 > 1e-12 else 1e-6
+                n_hat = delta / d
+
+                # positional correction: split the overlap
+                overlap = min_dist - d
+                corr = 0.5 * overlap * n_hat
+                pos[i] -= corr
+                pos[j] += corr
+
+                # relative velocity along normal
+                rel = vel[j] - vel[i]
+                vn = float(rel[0] * n_hat[0] + rel[1] * n_hat[1])
+                if vn < 0.0:
+                    # equal masses -> impulse split equally
+                    j_imp = -(1.0 + e) * vn * 0.5
+                    impulse = j_imp * n_hat
+                    vel[i] -= impulse
+                    vel[j] += impulse
+
 # ---------------------------
 # Main
 # ---------------------------
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Day 2 Task 1: Multi-ball (no inter-collisions yet)")
+    pygame.display.set_caption("Day 2 Task 1: Multi-ball (with inter-collisions)")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 18)
 
@@ -137,6 +171,9 @@ def main():
             # exponential horizontal friction
             vel[grounded, 0] *= np.maximum(0.0, 1.0 - GROUND_FRICTION * dt)
             vel[np.abs(vel[:, 0]) < 1.0, 0] = 0.0
+
+            # ---- NEW: ball–ball collisions
+            resolve_ball_ball_collisions(pos, vel, RADIUS, REST_COEFF)
 
         # ---- draw
         screen.fill(BG_COLOR)
