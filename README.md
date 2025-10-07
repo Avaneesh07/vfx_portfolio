@@ -125,21 +125,35 @@ Works with heatmap, particles, camera shake, energy bars, and geometry.
 🗒️ **Log:** `docs/DAY10_LOG.md`
 
 
+🧠 **Day 11 — Soft Body (Jelly Simulation)**  
+- 8 balls linked by spring constraints (forming a jelly blob)  
+- Sub-stepped spring solver for stability  
+- Adjustable stiffness + velocity clamp for control  
+- Compatible with heatmap, particles, camera shake, energy bars, geometry  
 
-🎮 Controls (current build)
-Key	Action
-Space	Pause / Resume
-R	Reset
-G	Toggle Gravity
-← / →	Apply Horizontal Impulse
-↑	Jump (if grounded)
-LMB	Move nearest ball
-RMB	Spawn a new ball
-L	Cycle Levels (Ramp / Funnel)
-H	Toggle Geometry Visibility
-D       Toggle Debug HUD 
-LMB     Drag (spring)
-+ / -   Spring stiffness
+🎥 **Demo:** `assets/day11_softbody_demo.zip`  
+🗒️ **Log:** `docs/DAY11_LOG.md`  
+
+---
+
+
+
+🎮 **Controls (Current Build)**  
+| Key | Action |  
+|-----|---------|  
+| Space | Pause / Resume |  
+| R | Reset |  
+| G | Toggle Gravity |  
+| ← / → | Apply Horizontal Impulse |  
+| ↑ | Jump (if grounded) |  
+| LMB | Move nearest ball / drag spring |  
+| RMB | Spawn a new ball |  
+| + / − | Adjust spring stiffness |  
+| L | Cycle Levels (Ramp / Funnel) |  
+| H | Toggle Geometry Visibility |  
+| B | Show / Hide Soft-Body Links |  
+| V | Toggle Velocity Heatmap |  
+| D | Show / Hide Debug HUD |  
 
 
 📁 Key Files
