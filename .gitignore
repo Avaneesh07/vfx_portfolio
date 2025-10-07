@@ -8,3 +8,4 @@ __pycache__/
 .python-version
 bouncing_balls_backup_day2.py
 *_backup*.py
+backups/
