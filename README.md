@@ -21,3 +21,9 @@ venv\Scripts\activate
 python -m pip install --upgrade pip
 pip install pygame numpy
 python bouncing_ball.py
+### Day 3 — Visual & Interactivity Upgrades
+- Per-ball radii (varied sizes)
+- Impact flash on collisions
+- Right-click to spawn new balls
+
+See: `bouncing_balls.py` and `docs/DAY3_LOG.md`
