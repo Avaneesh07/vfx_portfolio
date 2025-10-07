@@ -115,6 +115,16 @@ All Day 7–8 effects retained (particles, shake, energy bars).
 🎥 **Demo:** `assets/day9_velocity_heatmap_demo.zip`  
 🗒️ **Log:** `docs/DAY9_LOG.md`
 
+🪢 **Day 10 — Mouse Drag Spring**
+
+Grab any ball with **LMB** and move it with a springy “rubber band”.  
+Adjust spring stiffness with **+ / -**.  
+Works with heatmap, particles, camera shake, energy bars, and geometry.
+
+🎥 **Demo:** `assets/day10_mouse_spring_demo.zip`  
+🗒️ **Log:** `docs/DAY10_LOG.md`
+
+
 
 🎮 Controls (current build)
 Key	Action
@@ -128,6 +138,9 @@ RMB	Spawn a new ball
 L	Cycle Levels (Ramp / Funnel)
 H	Toggle Geometry Visibility
 D       Toggle Debug HUD 
+LMB     Drag (spring)
++ / -   Spring stiffness
+
 
 📁 Key Files
 File	Description
