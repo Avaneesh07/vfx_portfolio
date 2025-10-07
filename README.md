@@ -106,6 +106,16 @@ Spark particles + camera shake from Day 7 retained.
 🎥 **Demo:** `assets/day8_energy_visualization_demo.zip`  
 🗒️ **Log:** `docs/DAY8_LOG.md`
 
+🌈 **Day 9 — Velocity Heatmap + Debug HUD**
+
+Velocity-based colors (blue→yellow→red) show per-ball speed; toggle **V**.  
+Developer overlay shows s_max (95th percentile), trail alpha, and key hints; toggle **D**.  
+All Day 7–8 effects retained (particles, shake, energy bars).
+
+🎥 **Demo:** `assets/day9_velocity_heatmap_demo.zip`  
+🗒️ **Log:** `docs/DAY9_LOG.md`
+
+
 🎮 Controls (current build)
 Key	Action
 Space	Pause / Resume
@@ -117,6 +127,8 @@ LMB	Move nearest ball
 RMB	Spawn a new ball
 L	Cycle Levels (Ramp / Funnel)
 H	Toggle Geometry Visibility
+D       Toggle Debug HUD 
+
 📁 Key Files
 File	Description
 bouncing_ball.py	Day 1 – single-ball baseline
