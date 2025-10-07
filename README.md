@@ -97,6 +97,15 @@ Polished visuals: smoother trails and decaying shake.
 
 🗒️ Log: docs/DAY7_LOG.md
 
+⚡ **Day 8 — Energy Visualization**
+
+Introduced **real-time kinetic + potential energy bars** for each ball.  
+Shows ΣKE, ΣPE, ΣE totals in the HUD.  
+Spark particles + camera shake from Day 7 retained.  
+
+🎥 **Demo:** `assets/day8_energy_visualization_demo.zip`  
+🗒️ **Log:** `docs/DAY8_LOG.md`
+
 🎮 Controls (current build)
 Key	Action
 Space	Pause / Resume
