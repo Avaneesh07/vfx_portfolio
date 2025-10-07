@@ -13,13 +13,16 @@ FLOOR_COLOR = (35, 40, 55)
 TEXT_COLOR = (220, 220, 220)
 
 REST_COEFF = 0.80
-AIR_DRAG = 0.000
+AIR_DRAG = 0.15            # Day 4: gentle linear drag (per second)
 GROUND_FRICTION = 5.0
 
 GRAVITY_ON = True
 GRAVITY = 1400.0
 
 N_BALLS = 8  # initial count
+
+# Trails: higher = longer trails but more ghosting
+TRAIL_FADE_ALPHA = 35      # 0..255; ~25-45 looks nice
 
 # ---------------------------
 # Helpers
@@ -49,7 +52,6 @@ def make_balls(n):
     return pos, vel, colors, radii
 
 def lighten(c, amt):
-    # amt added to each channel, clamped
     r = min(255, c[0] + amt)
     g = min(255, c[1] + amt)
     b = min(255, c[2] + amt)
@@ -110,18 +112,29 @@ def add_ball_at_mouse(pos, vel, colors, radii, flash):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Day 3: Radii, Impact Flash, Right-Click Spawn")
+    pygame.display.set_caption("Day 4: Trails, Gentle Drag, Smooth HUD")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 18)
+
+    # Day 4: a separate surface to accumulate trails (with per-pixel alpha)
+    trail = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    # a reusable translucent rectangle to fade the trail each frame
+    fade_rect = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    fade_rect.fill((0, 0, 0, TRAIL_FADE_ALPHA))
 
     pos, vel, colors, radii = make_balls(N_BALLS)
     flash = np.zeros_like(radii, dtype=float)  # flash timers per ball
     paused = False
     gravity_on = GRAVITY_ON
 
+    # Day 4: smoother HUD (EMA of FPS)
+    fps_ema = 0.0
+    ema_alpha = 0.12  # smoothing factor (higher = more responsive)
+
     running = True
     while running:
-        dt = clock.tick(FPS) / 1000.0
+        dt_ms = clock.tick(FPS)
+        dt = dt_ms / 1000.0
 
         # ---- events
         for event in pygame.event.get():
@@ -134,6 +147,8 @@ def main():
                 elif event.key == pygame.K_r:
                     pos, vel, colors, radii = make_balls(N_BALLS)
                     flash = np.zeros_like(radii, dtype=float)
+                    # clear trails on reset
+                    trail.fill((0, 0, 0, 0))
                     gravity_on = True
                 elif event.key == pygame.K_g:
                     gravity_on = not gravity_on
@@ -160,6 +175,7 @@ def main():
             if gravity_on:
                 vel[:, 1] += GRAVITY * dt
 
+            # Day 4: gentle linear drag (reduces both vx, vy smoothly)
             if AIR_DRAG > 0.0:
                 vel -= vel * AIR_DRAG * dt
 
@@ -201,19 +217,31 @@ def main():
             flash = np.maximum(0.0, flash - dt)
 
         # ---- draw
+        # 1) base background and floor
         screen.fill(BG_COLOR)
         pygame.draw.rect(screen, FLOOR_COLOR, pygame.Rect(0, HEIGHT - 6, WIDTH, 6))
 
+        # 2) fade the trail slightly (overlay semi-transparent black)
+        trail.blit(fade_rect, (0, 0))
+
+        # 3) draw the balls onto the trail surface (so their history remains)
         for i, c in enumerate(colors):
             draw_c = c
             if flash[i] > 0:
                 amt = int(120 * (flash[i] / 0.12))  # 0..120 brighten
                 draw_c = lighten(c, amt)
-            pygame.draw.circle(screen, draw_c, (int(pos[i, 0]), int(pos[i, 1])), int(radii[i]))
+            pygame.draw.circle(trail, draw_c, (int(pos[i, 0]), int(pos[i, 1])), int(radii[i]))
+
+        # 4) composite the trail layer onto the screen
+        screen.blit(trail, (0, 0))
+
+        # 5) HUD: smoother FPS using EMA
+        inst_fps = 1000.0 / dt_ms if dt_ms > 0 else 0.0
+        fps_ema = (1 - ema_alpha) * fps_ema + ema_alpha * inst_fps
 
         draw_text(
             screen,
-            f"balls={len(colors)}  g={'ON' if gravity_on else 'OFF'}  e={REST_COEFF:.2f}  friction={GROUND_FRICTION:.1f}  FPS~{clock.get_fps():.0f}",
+            f"balls={len(colors)}  g={'ON' if gravity_on else 'OFF'}  e={REST_COEFF:.2f}  drag={AIR_DRAG:.2f}  FPS~{fps_ema:5.1f}",
             10, 10, font
         )
         draw_text(
