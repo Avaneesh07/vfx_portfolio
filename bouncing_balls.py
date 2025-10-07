@@ -1,5 +1,6 @@
 import sys
 import math
+import random
 import pygame
 import numpy as np
 
@@ -11,7 +12,7 @@ FPS = 120
 BG_COLOR = (18, 18, 24)
 FLOOR_COLOR = (35, 40, 55)
 TEXT_COLOR = (220, 220, 220)
-GEOM_COLOR = (0, 255, 180)    # brighter teal for visibility
+GEOM_COLOR = (0, 255, 180)    # bright teal
 
 REST_COEFF = 0.80
 AIR_DRAG = 0.15               # gentle linear drag
@@ -20,12 +21,20 @@ GROUND_FRICTION = 5.0
 GRAVITY_ON = True
 GRAVITY = 1400.0
 
-N_BALLS = 8                   # initial count
-TRAIL_FADE_ALPHA = 55         # stronger fade so lines stay clear
+N_BALLS = 8
+TRAIL_FADE_ALPHA = 55
 DENSITY = 1.0                 # mass ~ r^2
 
+# Particles (Day 7)
+PARTICLE_GRAVITY = 900.0
+PARTICLE_FADE = 0.92          # per-frame alpha decay multiplier (0.9..0.98)
+PARTICLE_SPEED = (120, 460)   # min/max initial speed
+PARTICLE_LIFE = (0.25, 0.60)  # seconds
+SHAKE_DECAY = 7.0             # camera shake damping (bigger = faster settle)
+SHAKE_SCALE = 0.003           # how much impulse feeds shake
+
 # ---------------------------
-# Helpers
+# Small helpers
 # ---------------------------
 def draw_text(surface, text, x, y, font):
     surface.blit(font.render(text, True, TEXT_COLOR), (x, y))
@@ -39,11 +48,88 @@ def lighten(c, amt):
 def mass_from_radius(r):
     return DENSITY * float(r) * float(r)
 
+def clamp(x, lo, hi):
+    return lo if x < lo else (hi if x > hi else x)
+
+rng = np.random.default_rng()
+
+# ---------------------------
+# Particles (Day 7)
+# ---------------------------
+class Particle:
+    __slots__ = ("x", "y", "vx", "vy", "life", "max_life", "col", "alpha")
+    def __init__(self, x, y, vx, vy, life, col):
+        self.x = float(x); self.y = float(y)
+        self.vx = float(vx); self.vy = float(vy)
+        self.life = float(life); self.max_life = float(life)
+        self.col = col
+        self.alpha = 255
+
+    def update(self, dt):
+        # simple gravity + integrate
+        self.vy += PARTICLE_GRAVITY * dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.life -= dt
+        # fade alpha multiplicatively (soft tail)
+        self.alpha = int(self.alpha * (PARTICLE_FADE ** (dt * FPS)))
+        return self.life > 0 and self.alpha > 4
+
+    def draw(self, surf):
+        # draw as small filled circle; fade via per-particle alpha
+        a = clamp(self.alpha, 0, 255)
+        color = (min(255, self.col[0] + 60), min(255, self.col[1] + 60), min(255, self.col[2] + 60), a)
+        pygame.draw.circle(surf, color, (int(self.x), int(self.y)), 2)
+
+particles = []
+shake_mag = 0.0
+shake_angle = 0.0
+
+def add_particles_at(pos, color, strength):
+    """Spawn a burst of sparks at pos. strength ~ impulse magnitude."""
+    global particles, shake_mag, shake_angle
+    # map strength to particle count
+    count = int(clamp(2 + strength * 0.025, 6, 40))
+    x, y = float(pos[0]), float(pos[1])
+    # camera shake proportional to strength
+    shake_mag += strength * SHAKE_SCALE
+    shake_angle = rng.uniform(0, 2*math.pi)
+
+    for _ in range(count):
+        ang = rng.uniform(0, 2*math.pi)
+        speed = rng.uniform(*PARTICLE_SPEED)
+        vx = math.cos(ang) * speed
+        vy = math.sin(ang) * speed
+        life = rng.uniform(*PARTICLE_LIFE)
+        particles.append(Particle(x, y, vx, vy, life, color))
+
+def update_particles(dt, trail_surface):
+    # update and draw particles to the trail layer (so they get nice motion blur)
+    alive = []
+    for p in particles:
+        if p.update(dt):
+            p.draw(trail_surface)
+            alive.append(p)
+    particles[:] = alive
+
+def camera_shake_offset(dt):
+    """Return a small (ox, oy) to jitter the whole frame on big impacts."""
+    global shake_mag, shake_angle
+    if shake_mag <= 1e-4:
+        shake_mag = 0.0
+        return 0, 0
+    # decay
+    shake_mag = max(0.0, shake_mag - SHAKE_DECAY * dt * shake_mag)
+    # move angle slightly so it swirls a little
+    shake_angle += 22.0 * dt
+    ox = int(math.cos(shake_angle) * 6.0 * shake_mag)
+    oy = int(math.sin(shake_angle * 1.3) * 6.0 * shake_mag)
+    return ox, oy
+
+# ---------------------------
+# Balls & geometry (from Day 6)
+# ---------------------------
 def make_balls(n):
-    """
-    Returns (pos, vel, colors, radii, masses, inv_masses)
-    """
-    rng = np.random.default_rng()
     radii = rng.integers(14, 28, size=n).astype(int)
     pos = np.zeros((n, 2), dtype=float)
     vel = np.zeros((n, 2), dtype=float)
@@ -59,9 +145,6 @@ def make_balls(n):
     inv_masses = 1.0 / masses
     return pos, vel, colors, radii, masses, inv_masses
 
-# ---------------------------
-# Geometry: static line segments
-# ---------------------------
 class Segment:
     __slots__ = ("a", "b", "e", "fric")
     def __init__(self, ax, ay, bx, by, restitution=0.80, friction=0.05):
@@ -76,15 +159,16 @@ def closest_point_on_segment(a, b, p):
     if ab2 <= 1e-12:
         return a.copy(), 0.0
     t = float((p[0]-a[0])*ab[0] + (p[1]-a[1])*ab[1]) / ab2
-    t_clamped = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
-    q = a + t_clamped * ab
-    return q, t_clamped
+    t = 0.0 if t < 0.0 else (1.0 if t > 1.0 else t)
+    q = a + t * ab
+    return q, t
 
-def collide_ball_with_segment(pos_i, vel_i, radius_i, seg):
+def collide_ball_with_segment(pos_i, vel_i, radius_i, seg, color=None):
     """
-    Circle (pos_i, radius_i) vs static segment seg.
-    Push ball out along normal; reflect/dampen normal velocity; apply tangential friction.
-    Returns True if a collision occurred.
+    Circle vs static segment:
+    - Push out along normal
+    - Reflect/dampen normal velocity, damp tangent
+    - Spawn particles & shake using impact strength
     """
     q, _ = closest_point_on_segment(seg.a, seg.b, pos_i)
     d = pos_i - q
@@ -94,57 +178,50 @@ def collide_ball_with_segment(pos_i, vel_i, radius_i, seg):
         return False
 
     dist = math.sqrt(d2) if d2 > 1e-12 else 1e-6
-    n_hat = d / dist  # outward normal from surface toward ball center
+    n_hat = d / dist
     overlap = r - dist
 
-    # Positional correction: move ball only (segment is static "infinite mass")
+    # Positional correction
     pos_i += n_hat * overlap
 
-    # Velocity split into normal/tangent
+    # Velocity split
     vn = float(vel_i[0]*n_hat[0] + vel_i[1]*n_hat[1])
     vt = vel_i - vn * n_hat
 
-    # Bounce on normal with surface restitution
+    # Normal bounce + tangential friction
     new_vn = -seg.e * vn
-    # Tangential friction (simple damping)
     new_vt = vt * max(0.0, 1.0 - seg.fric)
 
+    # impact "strength" proxy: change in normal speed
+    impact_strength = abs(new_vn - vn) * 0.5 + np.linalg.norm(vt - new_vt) * 0.25
+
     vel_i[:] = new_vt + new_vn * n_hat
+
+    # Day 7: particles + shake
+    if color is None: color = (200, 220, 255)
+    add_particles_at(pos_i, color, impact_strength)
     return True
 
 def build_level(level_id):
-    """
-    Returns (segments, level_name)
-    Two example layouts:
-      1) Ramp + platform
-      2) Funnel + ledge
-    """
     segs = []
     if level_id == 1:
         name = "Ramp + Platform"
-        # Ramp (bottom-left up)
         segs.append(Segment(80, HEIGHT-120, 360, HEIGHT-40, restitution=0.80, friction=0.08))
-        # Opposing ramp (bottom-right up)
         segs.append(Segment(WIDTH-80, HEIGHT-120, WIDTH-360, HEIGHT-40, restitution=0.80, friction=0.08))
-        # Mid-air horizontal platform
         segs.append(Segment(450, 340, 820, 340, restitution=0.75, friction=0.05))
     else:
         name = "Funnel + Ledge"
-        # Funnel
         segs.append(Segment(40, 120, 380, 320, restitution=0.80, friction=0.06))
         segs.append(Segment(WIDTH-40, 120, WIDTH-380, 320, restitution=0.80, friction=0.06))
-        # Small ledge
         segs.append(Segment(420, 430, 560, 430, restitution=0.75, friction=0.05))
     return segs, name
 
 def draw_segments(surface, segs):
     for s in segs:
-        pygame.draw.line(surface, GEOM_COLOR, (int(s.a[0]), int(s.a[1])), (int(s.b[0]), int(s.b[1])), 4)  # thicker
+        pygame.draw.line(surface, GEOM_COLOR, (int(s.a[0]), int(s.a[1])), (int(s.b[0]), int(s.b[1])), 4)
 
-# ---------------------------
-# Ball–ball collisions (mass-aware)
-# ---------------------------
-def resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, e, flash=None):
+def resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, e, flash=None, colors=None):
+    """Mass-aware collisions + Day 7: impact particles/shake on strong hits."""
     n = pos.shape[0]
     for i in range(n):
         for j in range(i + 1, n):
@@ -180,11 +257,19 @@ def resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, e, fl
                         flash[i] = 0.12
                         flash[j] = 0.12
 
+                    # Day 7: particles at contact point (midpoint)
+                    contact = (pos[i] + pos[j]) * 0.5
+                    # use impulse magnitude as strength
+                    impact_strength = abs(j_imp)
+                    col_i = colors[i] if colors else (220, 220, 255)
+                    col_j = colors[j] if colors else (220, 220, 255)
+                    add_particles_at(contact, col_i, impact_strength * 0.7)
+                    add_particles_at(contact, col_j, impact_strength * 0.7)
+
 def add_ball_at_mouse(pos, vel, colors, radii, masses, inv_masses, flash):
     mx, my = pygame.mouse.get_pos()
     pos = np.vstack([pos, np.array([mx, my], dtype=float)])
     vel = np.vstack([vel, np.array([0.0, 0.0], dtype=float)])
-    rng = np.random.default_rng()
     new_color = tuple(int(c) for c in rng.uniform(140, 255, size=3))
     colors.append(new_color)
     new_r = int(rng.integers(14, 28))
@@ -201,7 +286,7 @@ def add_ball_at_mouse(pos, vel, colors, radii, masses, inv_masses, flash):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Day 6: Level Geometry (ramps, platforms) + collisions")
+    pygame.display.set_caption("Day 7: Impact particles + camera shake")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 18)
 
@@ -216,11 +301,9 @@ def main():
     paused = False
     gravity_on = GRAVITY_ON
 
-    # Smooth HUD FPS
     fps_ema = 0.0
     ema_alpha = 0.12
 
-    # Geometry / levels
     level_id = 1
     segments, level_name = build_level(level_id)
     show_geom = True
@@ -253,7 +336,6 @@ def main():
                     grounded = np.isclose(pos[:, 1] + radii, HEIGHT, atol=3.0)
                     vel[grounded, 1] = -700.0
                 elif event.key == pygame.K_l:
-                    # cycle levels 1 <-> 2
                     level_id = 2 if level_id == 1 else 1
                     segments, level_name = build_level(level_id)
                 elif event.key == pygame.K_h:
@@ -308,36 +390,51 @@ def main():
             vel[grounded, 0] *= np.maximum(0.0, 1.0 - GROUND_FRICTION * dt)
             vel[np.abs(vel[:, 0]) < 1.0, 0] = 0.0
 
-            # --- collide with segments (static geometry)
+            # collide with segments (static geometry) + particles on impact
             for i in range(len(radii)):
                 for seg in segments:
-                    if collide_ball_with_segment(pos[i], vel[i], radii[i], seg):
-                        flash[i] = 0.12  # flash on surface impact
+                    if collide_ball_with_segment(pos[i], vel[i], radii[i], seg, color=colors[i]):
+                        flash[i] = 0.12
 
-            # mass-aware ball-ball collisions
-            resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, REST_COEFF, flash)
+            # mass-aware ball-ball collisions + particles
+            resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, REST_COEFF, flash, colors)
 
             # decay flash timers
             flash = np.maximum(0.0, flash - dt)
 
         # ---- draw
+        # camera shake offset (Day 7)
+        ox, oy = camera_shake_offset(dt)
+
         # 1) background + floor
         screen.fill(BG_COLOR)
-        pygame.draw.rect(screen, FLOOR_COLOR, pygame.Rect(0, HEIGHT - 6, WIDTH, 6))
+        pygame.draw.rect(screen, FLOOR_COLOR, pygame.Rect(0 + ox, HEIGHT - 6 + oy, WIDTH, 6))
 
-        # 2) trails layer (under geometry)
+        # 2) trails layer
+        # fade old trails
         trail.blit(fade_rect, (0, 0))
+        # draw balls (with impact flash)
         for i, c in enumerate(colors):
             draw_c = c
             if flash[i] > 0:
                 amt = int(120 * (flash[i] / 0.12))
                 draw_c = lighten(c, amt)
-            pygame.draw.circle(trail, draw_c, (int(pos[i, 0]), int(pos[i, 1])), int(radii[i]))
+            pygame.draw.circle(trail, draw_c, (int(pos[i, 0] + ox), int(pos[i, 1] + oy)), int(radii[i]))
+        # draw + update particles on the trail layer for nice blur
+        update_particles(dt, trail)
+        # composite trail
         screen.blit(trail, (0, 0))
 
-        # 3) draw geometry LAST (on top so it's always visible)
+        # 3) draw geometry on top
         if show_geom:
-            draw_segments(screen, segments)
+            # redraw segments with same offset so they "shake" with the frame
+            for s in segments:
+                pygame.draw.line(
+                    screen, GEOM_COLOR,
+                    (int(s.a[0] + ox), int(s.a[1] + oy)),
+                    (int(s.b[0] + ox), int(s.b[1] + oy)),
+                    4
+                )
 
         # 4) HUD
         dt_ms_safe = max(1, dt_ms)
@@ -349,14 +446,10 @@ def main():
 
         draw_text(
             screen,
-            f"lvl={level_name}  geom={'ON' if show_geom else 'OFF'}  segs={len(segments)}  balls={len(colors)}  g={'ON' if gravity_on else 'OFF'}  e={REST_COEFF:.2f}  drag={AIR_DRAG:.2f}  FPS~{fps_ema:5.1f}",
+            f"lvl={level_name}  geom={'ON' if show_geom else 'OFF'}  balls={len(colors)}  g={'ON' if gravity_on else 'OFF'}  e={REST_COEFF:.2f}  drag={AIR_DRAG:.2f}  FPS~{fps_ema:5.1f}",
             10, 10, font
         )
-        draw_text(
-            screen,
-            f"Σp=({px:8.1f}, {py:8.1f})",
-            10, 32, font
-        )
+        draw_text(screen, f"Σp=({px:8.1f}, {py:8.1f})", 10, 32, font)
         draw_text(
             screen,
             "Space=pause  R=reset  G=toggle g  ←/→ impulses  ↑ jump  LMB=move  RMB=spawn  L=cycle level  H=toggle geom",
