@@ -1,14 +1,11 @@
-# Physics Sim: Bouncing Ball
+# 🎮 Physics Sim: Bouncing Ball (Pygame + NumPy)
 
-Day 1 — first physics-based simulation using **Pygame + NumPy**.
-
-# Physics Sim: Bouncing Ball (Pygame + NumPy)
-
-Interactive physics sandbox built step-by-step as a VFX + Computer Science portfolio project.
+Interactive physics sandbox built step-by-step as a **VFX + Computer Science portfolio project**.  
+Each day adds new simulation or visual effects concepts — perfect for combining CS fundamentals with real-time animation skills.
 
 ---
 
-## How to Run
+## 🚀 How to Run
 ```bat
 python -m venv venv
 venv\Scripts\activate
@@ -17,89 +14,108 @@ pip install pygame numpy
 python bouncing_balls.py   # full version with levels, particles & shake
 
 
-Day 1 – Single Bouncing Ball
+🧱 Day 1 — Single Bouncing Ball
 
-Basic gravity, wall/floor collisions, HUD.
+Implemented gravity, wall & floor collisions, and pause/reset controls.
+
+Added on-screen HUD for velocity and position.
 
 Controls: Space, R, G, ←/→, ↑, LMB.
 
-Demo: assets/day1_bouncing_ball_demo.mp4 or .zip
+🎥 Demo: assets/day1_bouncing_ball_demo.mp4
+ or assets/day1_bouncing_ball_demo.zip
 
-Log: docs/DAY1_LOG.md
+🗒️ Log: docs/DAY1_LOG.md
 
-Day 2 – Multi-Ball Simulation
+⚙️ Day 2 — Multi-Ball Simulation
 
-Multiple balls moving and colliding elastically.
+Created multiple balls with independent motion and gravity.
 
-Pairwise ball-ball collision resolution.
+Added ball–ball elastic collision resolution and overlap correction.
 
-Log: docs/DAY2_LOG.md
+Vectorized physics using NumPy arrays.
 
-Day 3 – Visual & Interactivity Upgrades
+🎥 Demo: (recorded during testing phase)
 
-Per-ball radii (sizes vary).
+🗒️ Log: docs/DAY2_LOG.md
 
-Impact flash on collisions.
+🎨 Day 3 — Visual & Interactivity Upgrades
 
-Right-click to spawn new balls.
+Introduced per-ball radii (different sizes & colors).
 
-Log: docs/DAY3_LOG.md
+Added impact flashes and mouse-based repositioning.
 
-Day 4 – Mass & Momentum
+Right-click spawns new balls dynamically.
 
-Mass proportional to radius².
+🎥 Demo: (interactive visual test with variable sizes)
 
-Momentum (Σp) HUD added.
+🗒️ Log: docs/DAY3_LOG.md
 
-Mass-aware impulse and friction system.
+⚖️ Day 4 — Mass & Momentum
 
-Log: docs/DAY4_LOG.md
+Mass scales with radius² for realistic energy transfer.
 
-Day 5 – Recording & Runbook
+Added total momentum (Σp) display to HUD.
 
-Steps Recorder used for demo documentation.
+Implemented mass-aware friction & impulse handling.
 
-Created a consistent daily project log format.
+🎥 Demo: (momentum conservation test)
 
-Log: docs/DAY5_LOG.md
+🗒️ Log: docs/DAY4_LOG.md
 
-Day 6 – Level Geometry
+🧩 Day 5 — Recording & Runbook
 
-Added ramps, platforms, and funnels.
+Used Windows Steps Recorder for live simulation capture.
 
-Keys: H toggle geometry, L switch levels.
+Created documentation structure under /docs for consistent daily logs.
 
-Log: docs/DAY6_LOG.md
+🎥 Demo: assets/day5_mass_collisions_demo.zip
 
-Day 7 – Impact Particles + Camera Shake
+🗒️ Log: docs/DAY5_LOG.md
 
-Sparks on ball–ball and ball–geometry impacts.
+🧗 Day 6 — Level Geometry
 
-Subtle screen shake for strong collisions.
+Added ramps, platforms, and funnels (Level 1 & 2 scenes).
 
-Demo: assets/day7_particles_demo.zip
+Toggle geometry visibility (H) or switch levels (L).
 
-Log: docs/DAY7_LOG.md
+Balls interact and slide smoothly on sloped surfaces.
 
-Controls (current build)
+🎥 Demo: assets/day6_geometry_demo.zip
+
+🗒️ Log: docs/DAY6_LOG.md
+
+💥 Day 7 — Impact Particles + Camera Shake
+
+Added spark particles for ball–ball and ball–geometry collisions.
+
+Implemented subtle camera shake proportional to impact force.
+
+Polished visuals: smoother trails and decaying shake.
+
+🎥 Demo: assets/day7_particles_demo.zip
+
+🗒️ Log: docs/DAY7_LOG.md
+
+🎮 Controls (current build)
 Key	Action
 Space	Pause / Resume
 R	Reset
 G	Toggle Gravity
-← / →	Apply horizontal impulse
+← / →	Apply Horizontal Impulse
 ↑	Jump (if grounded)
 LMB	Move nearest ball
 RMB	Spawn a new ball
-L	Cycle level (Ramp / Funnel)
-H	Toggle geometry visibility
-Key Files
+L	Cycle Levels (Ramp / Funnel)
+H	Toggle Geometry Visibility
+📁 Key Files
+File	Description
+bouncing_ball.py	Day 1 – single-ball baseline
+bouncing_balls.py	Multi-ball + levels + VFX + camera shake
+assets/	All demos, screen recordings, and steps recorder ZIPs
+docs/	Daily logs (DAY1–DAY7)
+progress.md	Master progress tracker
+🧠 About
 
-bouncing_ball.py — Day 1 single-ball baseline
-
-bouncing_balls.py — Multi-ball build with geometry, particles, and shake
-
-assets/ — Video and Steps Recorder demos
-
-docs/ — Daily logs (DAY1–DAY7)
-
-progress.md — Overall tracking
+This project merges physics simulation, animation design, and computational thinking — showcasing how real-world physics can be visualized interactively through Python (NumPy + Pygame).
+Perfect for portfolios targeting VFX, Game Dev, or Computational Arts research.
