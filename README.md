@@ -151,6 +151,26 @@ Works with heatmap, particles, camera shake, energy bars, and geometry.
 - `C` toggle turbulence  
 - `,/.` frequency −/+  
 
+### Day 13 — Cloth Tearing (with Wind + Ball)
+- Hanging cloth with structural springs
+- Wind base + turbulence (amplitude & frequency)
+- Shift+Drag to tear springs, `Y` to repair all
+- RMB spawns a bouncing ball that collides with the cloth
+
+**Demo:** `assets/day13_cloth_tearing_demo.zip`  
+**Docs:** `docs/DAY13_LOG.md`
+Wind: W / A / ← / → / S
+
+Turbulence: Z/X and ,/. and C
+
+Cloth: LMB drag, Shift+LMB tears, Y repairs
+
+Ball: RMB toggles
+
+View: B, H, D; Level: L
+
+System: Space, R
+
 
 
 
