@@ -134,7 +134,23 @@ Works with heatmap, particles, camera shake, energy bars, and geometry.
 🎥 **Demo:** `assets/day11_softbody_demo.zip`  
 🗒️ **Log:** `docs/DAY11_LOG.md`  
 
----
+### 🌬 Day 12 — Wind Field (Cloth)
+
+- Constant +X wind with adjustable strength  
+- Optional per-node turbulence (random phase sine)  
+- Frequency controls for flutter vs billow  
+
+🎥 Demo: `assets/day12_wind_demo.zip`  
+🗒 Docs: `docs/DAY12_LOG.md`
+
+**Wind Controls**
+- `W` toggle wind  
+- `A/D` base wind −/+  
+- `S` zero wind  
+- `Z/X` turbulence −/+  
+- `C` toggle turbulence  
+- `,/.` frequency −/+  
+
 
 
 
