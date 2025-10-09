@@ -171,6 +171,13 @@ View: B, H, D; Level: L
 
 System: Space, R
 
+### Day 14 — Cloth Pinning + Presets
+- **Pin Edit Mode (`P`)**: left-click to pin/unpin cloth nodes.
+- **Save (`Ctrl+S`) / Load (`Ctrl+L`)** pin presets to JSON.
+- Compatible with wind, turbulence, dragging, and ball interactions.
+
+**Demo:** `assets/day14_cloth_pins_demo.zip`  
+**Docs:** `docs/DAY14_LOG.md`
 
 
 
