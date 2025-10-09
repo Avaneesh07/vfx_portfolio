@@ -4,7 +4,7 @@ import pygame
 import numpy as np
 
 # =========================
-# Config (stabilized)
+# Config (stabilized + visible heads)
 # =========================
 WIDTH, HEIGHT = 900, 600
 FPS = 120
@@ -18,15 +18,15 @@ LINK_COLOR = (180, 210, 255)
 
 # Physics (gentler)
 REST_COEFF = 0.80
-AIR_DRAG = 0.30         # ↑ more damping
+AIR_DRAG = 0.30         # damping
 GROUND_FRICTION = 5.0
 GRAVITY_ON = True
-GRAVITY = 900.0         # ↓ slower fall
+GRAVITY = 900.0
 
 # Balls & visuals
 N_BALLS = 8
-TRAIL_FADE_ALPHA = 55
-DENSITY = 1.0  # mass ~ r^2
+TRAIL_FADE_ALPHA = 120   # QUICKER FADE so balls don’t smear too long
+DENSITY = 1.0            # mass ~ r^2
 
 # Particles (Day 7)
 PARTICLE_GRAVITY = 900.0
@@ -37,7 +37,6 @@ SHAKE_DECAY = 7.0
 SHAKE_SCALE = 0.003
 
 # Heatmap (Day 9)
-HEATMAP_ON_START = False
 HEATMAP_MIN = 0.0
 HEATMAP_EPS = 1e-6
 
@@ -45,21 +44,21 @@ HEATMAP_EPS = 1e-6
 DEBUG_TOGGLE_KEY = pygame.K_d
 
 # Mouse drag spring (Day 10, gentler)
-SPRING_K_DEFAULT = 600.0   # ↓
-SPRING_DAMP      = 18.0    # ↑
+SPRING_K_DEFAULT = 600.0
+SPRING_DAMP      = 18.0
 DRAG_PICK_RADIUS = 60.0
 
 # =========================
 # Soft-body (Day 11, softer)
 # =========================
 SOFT_NODE_COUNT   = 8
-SOFT_RING_RADIUS  = 60.0         # ↓ a bit smaller
+SOFT_RING_RADIUS  = 60.0
 SOFT_NODE_R_MIN   = 14
 SOFT_NODE_R_MAX   = 20
-SOFT_LINK_K       = 380.0        # ↓ softer links
-SOFT_LINK_DAMP    = 22.0         # ↑ more damping
+SOFT_LINK_K       = 380.0
+SOFT_LINK_DAMP    = 22.0
 SOFT_DRAW_WIDTH   = 2
-SOFT_SPAWN_HEIGHT = 200.0        # spawn lower for stability
+SOFT_SPAWN_HEIGHT = 200.0
 
 # Safety clamp
 MAX_SPEED = 900.0
@@ -80,7 +79,7 @@ def lighten(c, amt):
     return (int(r), int(g), int(b))
 
 def mass_from_radius(r):
-    return float(r) * float(r)  # with DENSITY=1.0
+    return float(r) * float(r)
 
 def clamp(x, lo, hi):
     return lo if x < lo else (hi if x > hi else x)
@@ -377,7 +376,6 @@ def apply_softbody_links(pos, vel, inv_masses, links, dt):
         # Net force along link direction
         F = F_spring + F_damp
 
-        # Apply equal/opposite forces -> change velocities via a = F * inv_mass
         inv_mi = inv_masses[i]
         inv_mj = inv_masses[j]
         if inv_mi > 0.0:
@@ -392,7 +390,7 @@ def apply_softbody_links(pos, vel, inv_masses, links, dt):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Day 11: Soft Body (Jelly Blob) — Stabilized")
+    pygame.display.set_caption("Day 11: Soft Body (Jelly Blob) — Visible Heads")
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("consolas", 18)
 
@@ -406,8 +404,9 @@ def main():
 
     paused = False
     gravity_on = GRAVITY_ON
-    heatmap_on = HEATMAP_ON_START
+    heatmap_on = False
     show_debug = False
+    use_trails = True  # NEW: allow toggling trails
 
     fps_ema = 0.0
     ema_alpha = 0.12
@@ -416,14 +415,14 @@ def main():
     segments, level_name = build_level(level_id)
     show_geom = True
 
-    # Mouse spring (Day 10)
+    # Mouse spring
     dragging = False
     dragged_idx = -1
     spring_k = SPRING_K_DEFAULT
 
-    # Soft-body state (Day 11)
+    # Soft-body state
     show_links = True
-    all_links = []  # accumulate links for all spawned soft bodies
+    all_links = []
 
     # Spawn one soft body at start (center)
     (pos, vel, colors, radii, masses, inv_masses, flash), links = spawn_softbody_ring(
@@ -497,6 +496,8 @@ def main():
                         k=SOFT_LINK_K, c=SOFT_LINK_DAMP
                     )
                     all_links.extend(links)
+                elif event.key == pygame.K_t:
+                    use_trails = not use_trails  # NEW: toggle trails
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # LMB: drag nearest
@@ -581,11 +582,11 @@ def main():
             # ball–ball collisions
             resolve_ball_ball_collisions_mass(pos, vel, radii, masses, inv_masses, REST_COEFF, flash, colors)
 
-            # --- safety: clamp extreme velocities (prevents explosions/tunneling)
-            speeds = np.linalg.norm(vel, axis=1)
-            mask = speeds > MAX_SPEED
+            # safety: clamp extreme velocities
+            speeds_tmp = np.linalg.norm(vel, axis=1)
+            mask = speeds_tmp > MAX_SPEED
             if np.any(mask):
-                vel[mask] *= (MAX_SPEED / speeds[mask])[:, None]
+                vel[mask] *= (MAX_SPEED / speeds_tmp[mask])[:, None]
 
             # decay flash
             flash = np.maximum(0.0, flash - dt)
@@ -596,27 +597,41 @@ def main():
         screen.fill(BG_COLOR)
         pygame.draw.rect(screen, FLOOR_COLOR, pygame.Rect(0 + ox, HEIGHT - 6 + oy, WIDTH, 6))
 
-        # trails layer
-        if TRAIL_FADE_ALPHA > 0:
+        # ---- Trails layer (optional) ----
+        if use_trails and TRAIL_FADE_ALPHA > 0:
             trail.blit(fade_rect, (0, 0))
         else:
             trail.fill((0, 0, 0, 0))
 
-        speeds = np.linalg.norm(vel, axis=1)
+        # speeds for heatmap
+        speeds = np.linalg.norm(vel, axis=1) if len(vel) else np.array([0.0])
         s_max = max(HEATMAP_MIN + HEATMAP_EPS, float(np.percentile(speeds, 95))) if speeds.size else 1.0
 
+        # draw balls onto the trail layer (blur)
         for i, base_c in enumerate(colors):
-            c = heat_color_from_speed(float(speeds[i]), HEATMAP_MIN, s_max) if HEATMAP_ON_START or False else base_c
-            # use runtime toggle:
-            if not heatmap_on:
-                c = base_c
-                if flash[i] > 0:
-                    amt = int(120 * (flash[i] / 0.12))
-                    c = lighten(base_c, amt)
+            c = heat_color_from_speed(float(speeds[i]), HEATMAP_MIN, s_max) if heatmap_on else base_c
+            if not heatmap_on and flash[i] > 0:
+                amt = int(120 * (flash[i] / 0.12))
+                c = lighten(base_c, amt)
             pygame.draw.circle(trail, c, (int(pos[i, 0] + ox), int(pos[i, 1] + oy)), int(radii[i]))
 
+        # draw + update particles to trail (for nice blur)
         update_particles(dt, trail)
+
+        # composite trail
         screen.blit(trail, (0, 0))
+
+        # ---- CRISP HEADS (always visible current position) ----
+        for i, base_c in enumerate(colors):
+            head_c = heatmap_on and heat_color_from_speed(float(speeds[i]), HEATMAP_MIN, s_max) or base_c
+            if not heatmap_on and flash[i] > 0:
+                amt = int(120 * (flash[i] / 0.12))
+                head_c = lighten(base_c, amt)
+            cx = int(pos[i, 0] + ox); cy = int(pos[i, 1] + oy); r = int(radii[i])
+            # thin outline for contrast
+            pygame.draw.circle(screen, (255, 255, 255), (cx, cy), r + 1, 2)
+            # solid fill
+            pygame.draw.circle(screen, head_c, (cx, cy), max(r - 2, 2))
 
         # geometry
         if show_geom:
@@ -628,7 +643,7 @@ def main():
                     4
                 )
 
-        # soft-body links (draw on top)
+        # soft-body links (on top)
         if show_links and all_links:
             for (i, j, _, _, _) in all_links:
                 pygame.draw.line(
@@ -659,7 +674,7 @@ def main():
 
         draw_text(
             screen,
-            f"lvl={level_name}  geom={'ON' if show_geom else 'OFF'}  links={'ON' if show_links else 'OFF'}  heat={'ON' if heatmap_on else 'OFF'}  balls={len(radii)}  g={'ON' if gravity_on else 'OFF'}  FPS~{fps_ema:5.1f}",
+            f"lvl={level_name}  geom={'ON' if show_geom else 'OFF'}  links={'ON' if show_links else 'OFF'}  heat={'ON' if heatmap_on else 'OFF'}  trails={'ON' if use_trails else 'OFF'}  balls={len(radii)}  g={'ON' if gravity_on else 'OFF'}  FPS~{fps_ema:5.1f}",
             10, 10, font
         )
         draw_text(screen, f"Σp=({px:8.1f}, {py:8.1f})", 10, 32, font)
@@ -687,15 +702,15 @@ def main():
 
         draw_text(
             screen,
-            "Space=pause  R=reset  G=toggle g  ←/→ impulses  ↑ jump  LMB=drag  RMB=spawn  L=level  H=geom  V=heatmap  D=debug  B=links  S=spawn soft",
+            "Space=pause  R=reset  G=toggle g  ←/→ impulses  ↑ jump  LMB=drag  RMB=spawn  L=level  H=geom  V=heatmap  D=debug  B=links  T=trails  S=spawn soft",
             10, 54, font
         )
 
         if show_debug:
             y0 = 78
             draw_text(screen, "[DEBUG] Developer HUD", 10, y0, font)
-            draw_text(screen, f"s_max (p95) for heatmap = {s_max:6.1f}", 10, y0+20, font)
-            draw_text(screen, f"Trail alpha = {TRAIL_FADE_ALPHA}  Balls = {len(radii)}  Soft links = {len(all_links)}", 10, y0+40, font)
+            draw_text(screen, f"s_max (p95) heatmap = {s_max:6.1f}", 10, y0+20, font)
+            draw_text(screen, f"Trail alpha = {TRAIL_FADE_ALPHA}  Trails={'ON' if use_trails else 'OFF'}  Balls = {len(radii)}  Soft links = {len(all_links)}", 10, y0+40, font)
             draw_text(screen, f"Spring k = {SPRING_K_DEFAULT:.1f} (mouse k={spring_k:.1f})  PickR = {DRAG_PICK_RADIUS}", 10, y0+60, font)
 
         pygame.display.flip()
