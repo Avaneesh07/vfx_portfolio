@@ -179,6 +179,19 @@ System: Space, R
 **Demo:** `assets/day14_cloth_pins_demo.zip`  
 **Docs:** `docs/DAY14_LOG.md`
 
+### 🧲 Day 15 — Fast Picking (Spatial Hash) + Pins/Presets
+- Added a **spatial hash** for instant node picking on large cloths.
+- Integrated with Day 14 **Pin Edit** and **Save/Load JSON** presets.
+- Rebuilds a tiny AABB per node each frame and only checks nearby cells.
+
+**Controls:**  
+LMB drag · Shift+LMB toggle pin · **P** pin nearest · **U** unpin all ·  
+**F5/Ctrl+S** save pins · **F9/Ctrl+O** load pins · **Space** pause · **R** reset ·  
+**W** toggle wind · **←/→** adjust wind · **S** zero wind · **B/H/D** view/HUD
+
+🗒️ **Log:** `docs/DAY15_LOG.md`
+
+
 
 
 🎮 **Controls (Current Build)**  

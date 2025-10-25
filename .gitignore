@@ -1,11 +1,68 @@
-venv/
+# ==========================
+# Python ignores
+# ==========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*.pdb
 *.log
-.idea/
+
+# ==========================
+# Virtual environment
+# ==========================
+venv/
+env/
+.venv/
+
+# ==========================
+# Build / cache folders
+# ==========================
+build/
+dist/
+*.egg-info/
+*.spec
+
+# ==========================
+# Editor / OS files
+# ==========================
 .vscode/
+.idea/
 .DS_Store
-.python-version
-bouncing_balls_backup_day2.py
-*_backup*.py
+Thumbs.db
+desktop.ini
+
+# ==========================
+# Assets / Media
+# ==========================
+assets/**/*.zip
+assets/**/*.rar
+assets/**/*.7z
+assets/**/*.mp4
+assets/**/*.mov
+assets/**/*.avi
+assets/**/*.mkv
+assets/**/*.png
+assets/**/*.jpg
+assets/**/*.jpeg
+assets/**/*.exr
+assets/**/*.tif
+assets/**/*.tiff
+
+# ==========================
+# Temporary / backups
+# ==========================
+*.bak
+*.tmp
+*.old
 backups/
+
+# ==========================
+# Project-specific
+# ==========================
+# Keep presets JSON small (comment out if you want to track them)
+# assets/presets/*.json
+
+# Ignore local settings or experiments
+local_*
+test_*
